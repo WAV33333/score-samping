@@ -14,12 +14,9 @@
       opacity: 1;
       transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.45s ease;
     }
-    .sb-outer.off {
-      transform: translateX(-110%);
-      opacity: 0;
-    }
+    .sb-outer.off { transform: translateX(-110%); opacity: 0; }
 
-    .scoreboard { width: 360px; overflow:hidden; border-radius:3px; box-shadow:0 4px 20px rgba(0,0,0,0.6); }
+    .scoreboard { width:360px; overflow:hidden; border-radius:3px; box-shadow:0 4px 20px rgba(0,0,0,0.6); }
 
     .player-row {
       display:flex; align-items:center; height:40px;
@@ -27,10 +24,7 @@
     }
     .player-row:nth-child(2) { border-bottom:none; }
 
-    .logo-area {
-      width:44px; height:40px; flex-shrink:0;
-      background:rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; overflow:hidden;
-    }
+    .logo-area { width:44px; height:40px; flex-shrink:0; background:rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .logo-area img { width:100%; height:100%; }
     .logo-area.hidden { display:none; }
 
@@ -42,17 +36,13 @@
 
     .score-box {
       width:50px; height:40px; flex-shrink:0;
-      background:linear-gradient(to bottom, #c8c8c8 0%, #888 100%);
-      display:flex; align-items:center; justify-content:center;
-      overflow:hidden; position:relative;
+      background:linear-gradient(to bottom,#c8c8c8 0%,#888 100%);
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
     }
-    .score-num {
-      font-size:22px; font-weight:800; color:#222;
-      display:block;
-    }
+    .score-num { font-size:22px; font-weight:800; color:#222; display:block; }
     @keyframes scoreSlideUp {
       from { transform:translateY(60%); opacity:0; }
-      to   { transform:translateY(0);   opacity:1; }
+      to   { transform:translateY(0); opacity:1; }
     }
     .score-num.animate { animation: scoreSlideUp 0.32s cubic-bezier(0.22,1,0.36,1); }
 
@@ -82,13 +72,14 @@
   </div>
 
   <script>
-    let prevScores = { 1: null, 2: null };
+    const MASTER_KEY = '$2a$10$l0nISveGf678nAzoMCxBS.k46o4KzWxYMXNDOQEjsAuvkic6DBv/S';
+    const BIN_KEY    = 'jsonbin-id';
+    let prevScores   = { 1: null, 2: null };
+    let lastEtag     = null;
 
     function rowBg(d, p) {
-      if (d[`p${p}gradient`]) {
-        return `linear-gradient(to right, ${d[`p${p}gradStart`]||d[`p${p}color`]}, ${d[`p${p}gradEnd`]||d[`p${p}color`]})`;
-      }
-      return d[`p${p}color`] || (p===1 ? '#476cff' : '#e63c3c');
+      if (d[`p${p}gradient`]) return `linear-gradient(to right,${d[`p${p}gradStart`]||d[`p${p}color`]},${d[`p${p}gradEnd`]||d[`p${p}color`]})`;
+      return d[`p${p}color`] || (p===1?'#476cff':'#e63c3c');
     }
 
     function animScore(el, newVal) {
@@ -100,11 +91,7 @@
 
     function apply(d) {
       const outer = document.getElementById('sbOuter');
-      if (d.scoreboard_visible === false) {
-        outer.classList.add('off');
-      } else {
-        outer.classList.remove('off');
-      }
+      outer.classList.toggle('off', d.scoreboard_visible === false);
 
       [1,2].forEach(p => {
         const row   = document.getElementById('row'+p);
@@ -113,9 +100,10 @@
         const score = document.getElementById('score'+p);
         const newScore = d[`p${p}score`] ?? 0;
 
-        row.style.background = rowBg(d, p);
-        name.style.color  = d[`p${p}textcolor`] || '#fff';
-        name.textContent  = d[`p${p}name`] || '';
+        row.style.background   = rowBg(d, p);
+        name.style.color       = d[`p${p}textcolor`] || '#fff';
+        name.style.textAlign   = d[`p${p}nameAlign`] || 'left';
+        name.textContent       = d[`p${p}name`] || '';
 
         if (prevScores[p] !== null && prevScores[p] !== newScore) {
           animScore(score, newScore);
@@ -124,6 +112,7 @@
         }
         prevScores[p] = newScore;
 
+        // logo dari localStorage (harus dibuka di browser yang sama untuk logo)
         const logoData = localStorage.getItem('scoreboard-logo'+p);
         if (d[`p${p}showLogo`] && logoData) {
           la.classList.remove('hidden');
@@ -136,45 +125,42 @@
 
       document.querySelectorAll('.turn-arrow').forEach(e=>e.remove());
       if (d.playerTurn==='1'||d.playerTurn===1) {
-        const a=document.createElement('span'); a.className='turn-arrow';
-        a.style.color=d.p1textcolor||'#fff'; a.textContent='▶';
+        const a=document.createElement('span');a.className='turn-arrow';
+        a.style.color=d.p1textcolor||'#fff';a.textContent='▶';
         document.getElementById('row1').appendChild(a);
       } else if (d.playerTurn==='2'||d.playerTurn===2) {
-        const a=document.createElement('span'); a.className='turn-arrow';
-        a.style.color=d.p2textcolor||'#fff'; a.textContent='▶';
+        const a=document.createElement('span');a.className='turn-arrow';
+        a.style.color=d.p2textcolor||'#fff';a.textContent='▶';
         document.getElementById('row2').appendChild(a);
       }
 
       document.getElementById('infoBar').style.background  = d.color1 || '#e8e8e8';
-      document.getElementById('raceLabel').style.color      = d.textColor1 || '#111';
-      document.getElementById('raceLabel').textContent      = d.infoText || '';
-      document.getElementById('raceLabel').style.textAlign  = d.infoAlign || 'center';
+      document.getElementById('raceLabel').style.color     = d.textColor1 || '#111';
+      document.getElementById('raceLabel').textContent     = d.infoText || '';
+      document.getElementById('raceLabel').style.textAlign = d.infoAlign || 'center';
     }
 
-    let lastRaw = null;
-    function applyFromStorage() {
-      const raw = localStorage.getItem('scoreboard-state');
-      if (raw && raw !== lastRaw) {
-        lastRaw = raw;
-        apply(JSON.parse(raw));
-      }
+    async function fetchBin() {
+      const binId = localStorage.getItem(BIN_KEY);
+      if (!binId) return;
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+          headers: { 'X-Master-Key': MASTER_KEY }
+        });
+        if (!res.ok) return;
+        const etag = res.headers.get('ETag') || res.headers.get('X-Request-Id') || '';
+        const j = await res.json();
+        const raw = JSON.stringify(j.record);
+        if (raw !== lastEtag) {
+          lastEtag = raw;
+          apply(j.record);
+        }
+      } catch(e) {}
     }
 
-    // storage event: fires saat tab LAIN menulis localStorage
-    window.addEventListener('storage', e => {
-      if (e.key === 'scoreboard-state' || e.key === 'scoreboard-ping') {
-        applyFromStorage();
-      }
-    });
-
-    // polling sebagai fallback (same tab / browser tanpa storage event)
-    applyFromStorage();
-    setInterval(applyFromStorage, 500);
-
-    try {
-      const ch = new BroadcastChannel('billiards-scoreboard');
-      ch.onmessage = e => { apply(e.data); lastRaw = JSON.stringify(e.data); };
-    } catch(e) {}
+    // poll JSONBin setiap 1 detik
+    fetchBin();
+    setInterval(fetchBin, 1000);
   </script>
 </body>
 </html>

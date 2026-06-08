@@ -7,9 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:     #140e21; --card:  #1e1530; --card2: #251d38;
-      --border: #3a2858; --acc:   #e8752a; --purp:  #9b44d0;
-      --text:   #f0eaf8; --muted: #7a6e90; --inp:   #120d1e;
+      --bg:#140e21;--card:#1e1530;--card2:#251d38;
+      --border:#3a2858;--acc:#e8752a;--purp:#9b44d0;
+      --text:#f0eaf8;--muted:#7a6e90;--inp:#120d1e;
     }
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);font-size:13px;}
@@ -48,7 +48,6 @@
 
     .sec{border:1px solid var(--border);border-radius:10px;margin:10px;overflow:hidden;}
     .sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--card2);cursor:pointer;user-select:none;}
-    .sec-hdr-left{display:flex;align-items:center;gap:10px;}
     .sec-title{font-size:13px;font-weight:600;}
     .chev{font-size:11px;color:var(--muted);transition:transform .2s;}
     .sec.collapsed .chev{transform:rotate(180deg);}
@@ -91,8 +90,15 @@
 
     .divider{height:1px;background:var(--border);margin:2px 0;}
 
-    .status-dot{width:7px;height:7px;border-radius:50%;background:#3cb96e;animation:pulse 2s infinite;}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:#888;transition:background .3s;}
+    .status-dot.live{background:#3cb96e;animation:pulse 2s infinite;}
+    .status-dot.err{background:#e63c3c;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    .sync-label{font-size:10px;color:var(--muted);font-weight:500;}
+
+    .align-btn{flex:1;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--muted);cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;transition:background .15s;}
+    .align-btn.active{background:var(--acc);color:#fff;border-color:var(--acc);}
 
     .spacer{height:16px;}
   </style>
@@ -102,8 +108,9 @@
 <div class="hdr">
   <span class="hdr-title">Billiards Scorebug</span>
   <div class="hdr-right">
-    <div class="status-dot" title="Live"></div>
-    <button onclick="openOverlay()" style="height:32px;padding:0 12px;background:var(--purp);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;letter-spacing:.04em;">⛶ OVERLAY</button>
+    <span class="sync-label" id="syncLabel">connecting...</span>
+    <div class="status-dot" id="statusDot"></div>
+    <button onclick="openOverlay()" style="height:32px;padding:0 12px;background:var(--purp);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;letter-spacing:.04em;">OVERLAY</button>
     <label class="tog">
       <input type="checkbox" id="mainToggle" checked onchange="onMainToggle()"/>
       <span class="tog-text" id="togText">ON</span>
@@ -131,6 +138,7 @@
   </div>
 </div>
 
+<!-- SCORE -->
 <div class="sec" id="secScore">
   <div class="sec-hdr" onclick="toggleSec('secScore')">
     <span class="sec-title">Score</span><span class="chev">∧</span>
@@ -140,8 +148,8 @@
     <div class="field">
       <span class="fl">Text Align</span>
       <div style="display:flex;gap:6px;width:100%;">
-        <button id="alignLeft" onclick="setAlign('left')" style="flex:1;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--muted);cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:background .15s;">⬅ Left</button>
-        <button id="alignCenter" onclick="setAlign('center')" style="flex:1;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--acc);color:#fff;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:background .15s;">⬛ Center</button>
+        <button id="alignLeft" class="align-btn" onclick="setAlign('left')">Left</button>
+        <button id="alignCenter" class="align-btn active" onclick="setAlign('center')">Center</button>
       </div>
     </div>
     <div class="field">
@@ -169,12 +177,20 @@
   </div>
 </div>
 
+<!-- PLAYER 1 -->
 <div class="sec" id="secP1">
   <div class="sec-hdr" onclick="toggleSec('secP1')">
     <span class="sec-title">Player 1</span><span class="chev">∧</span>
   </div>
   <div class="sec-body">
     <div class="field"><span class="fl">Name</span><input type="text" id="name1" value="PLAYER 1" oninput="sync()"/></div>
+    <div class="field">
+      <span class="fl">Name Align</span>
+      <div style="display:flex;gap:6px;width:100%;">
+        <button id="p1alignLeft" class="align-btn active" onclick="setNameAlign(1,'left')">Left</button>
+        <button id="p1alignCenter" class="align-btn" onclick="setNameAlign(1,'center')">Center</button>
+      </div>
+    </div>
     <div class="field">
       <span class="fl">Logo</span>
       <div class="logo-field">
@@ -186,11 +202,7 @@
     </div>
     <div class="field">
       <span class="fl">Show Logo</span>
-      <label class="tog-sm">
-        <input type="checkbox" id="p1showLogo" onchange="sync()"/>
-        <span class="tog-text">OFF</span>
-        <div class="tog-sm-dot"></div>
-      </label>
+      <label class="tog-sm"><input type="checkbox" id="p1showLogo" onchange="sync()"/><span class="tog-text">OFF</span><div class="tog-sm-dot"></div></label>
     </div>
     <div class="field"><span class="fl">Logo Fit</span>
       <select id="p1logoFit" onchange="sync()"><option value="contain">Contain</option><option value="cover">Cover</option></select>
@@ -213,11 +225,7 @@
     <div class="divider"></div>
     <div class="field">
       <span class="fl">Gradient</span>
-      <label class="tog-sm">
-        <input type="checkbox" id="p1gradient" onchange="sync()"/>
-        <span class="tog-text">OFF</span>
-        <div class="tog-sm-dot"></div>
-      </label>
+      <label class="tog-sm"><input type="checkbox" id="p1gradient" onchange="sync()"/><span class="tog-text">OFF</span><div class="tog-sm-dot"></div></label>
     </div>
     <div class="field">
       <span class="fl">Grad Start</span>
@@ -236,12 +244,20 @@
   </div>
 </div>
 
+<!-- PLAYER 2 -->
 <div class="sec" id="secP2">
   <div class="sec-hdr" onclick="toggleSec('secP2')">
     <span class="sec-title">Player 2</span><span class="chev">∧</span>
   </div>
   <div class="sec-body">
     <div class="field"><span class="fl">Name</span><input type="text" id="name2" value="PLAYER 2" oninput="sync()"/></div>
+    <div class="field">
+      <span class="fl">Name Align</span>
+      <div style="display:flex;gap:6px;width:100%;">
+        <button id="p2alignLeft" class="align-btn active" onclick="setNameAlign(2,'left')">Left</button>
+        <button id="p2alignCenter" class="align-btn" onclick="setNameAlign(2,'center')">Center</button>
+      </div>
+    </div>
     <div class="field">
       <span class="fl">Logo</span>
       <div class="logo-field">
@@ -253,11 +269,7 @@
     </div>
     <div class="field">
       <span class="fl">Show Logo</span>
-      <label class="tog-sm">
-        <input type="checkbox" id="p2showLogo" onchange="sync()"/>
-        <span class="tog-text">OFF</span>
-        <div class="tog-sm-dot"></div>
-      </label>
+      <label class="tog-sm"><input type="checkbox" id="p2showLogo" onchange="sync()"/><span class="tog-text">OFF</span><div class="tog-sm-dot"></div></label>
     </div>
     <div class="field"><span class="fl">Logo Fit</span>
       <select id="p2logoFit" onchange="sync()"><option value="contain">Contain</option><option value="cover">Cover</option></select>
@@ -280,11 +292,7 @@
     <div class="divider"></div>
     <div class="field">
       <span class="fl">Gradient</span>
-      <label class="tog-sm">
-        <input type="checkbox" id="p2gradient" onchange="sync()"/>
-        <span class="tog-text">OFF</span>
-        <div class="tog-sm-dot"></div>
-      </label>
+      <label class="tog-sm"><input type="checkbox" id="p2gradient" onchange="sync()"/><span class="tog-text">OFF</span><div class="tog-sm-dot"></div></label>
     </div>
     <div class="field">
       <span class="fl">Grad Start</span>
@@ -303,6 +311,7 @@
   </div>
 </div>
 
+<!-- COLOR PALETTE -->
 <div class="sec" id="secPal">
   <div class="sec-hdr" onclick="toggleSec('secPal')">
     <span class="sec-title">Color Palette</span><span class="chev">∧</span>
@@ -328,36 +337,101 @@
 <div class="spacer"></div>
 
 <script>
-const ch = new BroadcastChannel('billiards-scoreboard');
+// ── JSONBin config ──────────────────────────────────────────
+const MASTER_KEY = '$2a$10$l0nISveGf678nAzoMCxBS.k46o4KzWxYMXNDOQEjsAuvkic6DBv/S';
+const BIN_KEY    = 'jsonbin-id';
+let binId        = localStorage.getItem(BIN_KEY) || null;
+let isSyncing    = false;
+let syncTimer    = null;
+
+function setStatus(s) {
+  const dot   = document.getElementById('statusDot');
+  const label = document.getElementById('syncLabel');
+  dot.className = 'status-dot ' + (s==='live'?'live':s==='err'?'err':'');
+  label.textContent = s==='live'?'live':s==='err'?'error':'syncing...';
+}
+
+async function createBin(data) {
+  const res = await fetch('https://api.jsonbin.io/v3/b', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': MASTER_KEY,
+      'X-Bin-Name': 'billiards-scoreboard',
+      'X-Private': 'false'
+    },
+    body: JSON.stringify(data)
+  });
+  const j = await res.json();
+  return j.metadata?.id || null;
+}
+
+async function updateBin(data) {
+  await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': MASTER_KEY
+    },
+    body: JSON.stringify(data)
+  });
+}
+
+async function pushState() {
+  if (isSyncing) return;
+  isSyncing = true;
+  setStatus('syncing');
+  try {
+    const d = getState();
+    if (!binId) {
+      binId = await createBin(d);
+      if (binId) {
+        localStorage.setItem(BIN_KEY, binId);
+      } else {
+        throw new Error('no bin id');
+      }
+    } else {
+      await updateBin(d);
+    }
+    setStatus('live');
+  } catch(e) {
+    setStatus('err');
+  }
+  isSyncing = false;
+}
+// ────────────────────────────────────────────────────────────
+
 const COLOR_IDS = ['p1color','p1textcolor','p1gradStart','p1gradEnd','p2color','p2textcolor','p2gradStart','p2gradEnd','color1','textColor1'];
 
 function getState() {
   const bool = id => document.getElementById(id)?.checked || false;
   return {
     scoreboard_visible: document.getElementById('mainToggle').checked,
-    p1name:       document.getElementById('name1').value,
-    p1score:      parseInt(document.getElementById('score1').value)||0,
-    p1color:      document.getElementById('p1color').value,
-    p1textcolor:  document.getElementById('p1textcolor').value,
-    p1showLogo:   bool('p1showLogo'),
-    p1logoFit:    document.getElementById('p1logoFit').value,
-    p1gradient:   bool('p1gradient'),
-    p1gradStart:  document.getElementById('p1gradStart').value,
-    p1gradEnd:    document.getElementById('p1gradEnd').value,
-    p2name:       document.getElementById('name2').value,
-    p2score:      parseInt(document.getElementById('score2').value)||0,
-    p2color:      document.getElementById('p2color').value,
-    p2textcolor:  document.getElementById('p2textcolor').value,
-    p2showLogo:   bool('p2showLogo'),
-    p2logoFit:    document.getElementById('p2logoFit').value,
-    p2gradient:   bool('p2gradient'),
-    p2gradStart:  document.getElementById('p2gradStart').value,
-    p2gradEnd:    document.getElementById('p2gradEnd').value,
-    infoText:     document.getElementById('infoText').value,
-    infoAlign:    window._infoAlign || 'center',
-    playerTurn:   document.getElementById('playerTurn').value,
-    color1:       document.getElementById('color1').value,
-    textColor1:   document.getElementById('textColor1').value,
+    p1name:      document.getElementById('name1').value,
+    p1nameAlign: window._p1nameAlign || 'left',
+    p1score:     parseInt(document.getElementById('score1').value)||0,
+    p1color:     document.getElementById('p1color').value,
+    p1textcolor: document.getElementById('p1textcolor').value,
+    p1showLogo:  bool('p1showLogo'),
+    p1logoFit:   document.getElementById('p1logoFit').value,
+    p1gradient:  bool('p1gradient'),
+    p1gradStart: document.getElementById('p1gradStart').value,
+    p1gradEnd:   document.getElementById('p1gradEnd').value,
+    p2name:      document.getElementById('name2').value,
+    p2nameAlign: window._p2nameAlign || 'left',
+    p2score:     parseInt(document.getElementById('score2').value)||0,
+    p2color:     document.getElementById('p2color').value,
+    p2textcolor: document.getElementById('p2textcolor').value,
+    p2showLogo:  bool('p2showLogo'),
+    p2logoFit:   document.getElementById('p2logoFit').value,
+    p2gradient:  bool('p2gradient'),
+    p2gradStart: document.getElementById('p2gradStart').value,
+    p2gradEnd:   document.getElementById('p2gradEnd').value,
+    infoText:    document.getElementById('infoText').value,
+    infoAlign:   window._infoAlign || 'center',
+    playerTurn:  document.getElementById('playerTurn').value,
+    color1:      document.getElementById('color1').value,
+    textColor1:  document.getElementById('textColor1').value,
   };
 }
 
@@ -368,10 +442,12 @@ function rowBg(d, p) {
 
 function updatePreview(d) {
   [1,2].forEach(p => {
-    const row = document.getElementById('pr'+p);
+    const row    = document.getElementById('pr'+p);
     const logoEl = document.getElementById('pl'+p);
     row.style.background = rowBg(d, p);
-    row.querySelector('.prev-name').style.color = d[`p${p}textcolor`];
+    const nameEl = row.querySelector('.prev-name');
+    nameEl.style.color     = d[`p${p}textcolor`];
+    nameEl.style.textAlign = d[`p${p}nameAlign`] || 'left';
     document.getElementById('pn'+p).textContent = d[`p${p}name`] || 'PLAYER '+p;
     document.getElementById('ps'+p).textContent = d[`p${p}score`];
     const logoData = localStorage.getItem('scoreboard-logo'+p);
@@ -387,9 +463,9 @@ function updatePreview(d) {
   if (d.playerTurn==='1') { const a=document.createElement('span');a.className='prev-arrow';a.style.color=d.p1textcolor;a.textContent='▶';document.getElementById('pr1').appendChild(a); }
   else if (d.playerTurn==='2') { const a=document.createElement('span');a.className='prev-arrow';a.style.color=d.p2textcolor;a.textContent='▶';document.getElementById('pr2').appendChild(a); }
   document.getElementById('pinfo').style.background = d.color1;
-  document.getElementById('prace').style.color = d.textColor1;
-  document.getElementById('prace').textContent = d.infoText || '';
-  document.getElementById('prace').style.textAlign = d.infoAlign || 'center';
+  document.getElementById('prace').style.color      = d.textColor1;
+  document.getElementById('prace').textContent      = d.infoText || '';
+  document.getElementById('prace').style.textAlign  = d.infoAlign || 'center';
   ['p1showLogo','p1gradient','p2showLogo','p2gradient'].forEach(id=>{
     const cb = document.getElementById(id);
     const span = cb?.parentElement?.querySelector('.tog-text');
@@ -400,11 +476,11 @@ function updatePreview(d) {
 
 function sync() {
   const d = getState();
-  ch.postMessage(d);
   localStorage.setItem('scoreboard-state', JSON.stringify(d));
-  // Trigger storage event agar tab lain bisa mendeteksi perubahan
-  localStorage.setItem('scoreboard-ping', Date.now().toString());
   updatePreview(d);
+  // debounce push ke JSONBin 400ms
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushState, 400);
 }
 
 function openOverlay() {
@@ -418,21 +494,29 @@ function cpChange(id,val) { const el=document.getElementById(id);if(el)el.value=
 function hxChange(id,val) { if(/^#[0-9a-fA-F]{6}$/.test(val)){const pk=document.getElementById('pk_'+id);if(pk)pk.value=val;const sp=document.getElementById('spv_'+id);if(sp)sp.style.background=val;sync();} }
 function loadLogo(p,input) { if(!input.files[0])return;const r=new FileReader();r.onload=e=>{localStorage.setItem('scoreboard-logo'+p,e.target.result);document.getElementById('lt'+p).textContent=input.files[0].name;sync();};r.readAsDataURL(input.files[0]); }
 function clearLogo(p) { localStorage.removeItem('scoreboard-logo'+p);document.getElementById('lt'+p).textContent='Select image...';document.getElementById('lf'+p).value='';sync(); }
+
+function setNameAlign(p, v) {
+  window[`_p${p}nameAlign`] = v;
+  document.getElementById(`p${p}alignLeft`).className  = 'align-btn' + (v==='left'?' active':'');
+  document.getElementById(`p${p}alignCenter`).className = 'align-btn' + (v==='center'?' active':'');
+  sync();
+}
 function setAlign(v) {
   window._infoAlign = v;
-  document.getElementById('alignLeft').style.background = v==='left' ? 'var(--acc)' : 'var(--card2)';
-  document.getElementById('alignLeft').style.color = v==='left' ? '#fff' : 'var(--muted)';
-  document.getElementById('alignCenter').style.background = v==='center' ? 'var(--acc)' : 'var(--card2)';
-  document.getElementById('alignCenter').style.color = v==='center' ? '#fff' : 'var(--muted)';
+  document.getElementById('alignLeft').className  = 'align-btn' + (v==='left'?' active':'');
+  document.getElementById('alignCenter').className = 'align-btn' + (v==='center'?' active':'');
   sync();
 }
 
+// load saved
 const saved = localStorage.getItem('scoreboard-state');
 if (saved) {
   const d = JSON.parse(saved);
   const sv = (id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.value=v;};
   const sb = (id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.checked=v;};
   sv('name1',d.p1name);sv('score1',d.p1score);sv('name2',d.p2name);sv('score2',d.p2score);
+  if(d.p1nameAlign) setNameAlign(1,d.p1nameAlign); else setNameAlign(1,'left');
+  if(d.p2nameAlign) setNameAlign(2,d.p2nameAlign); else setNameAlign(2,'left');
   sv('p1color',d.p1color);sv('p1textcolor',d.p1textcolor);sv('p1gradStart',d.p1gradStart);sv('p1gradEnd',d.p1gradEnd);sv('p1logoFit',d.p1logoFit);
   sv('p2color',d.p2color);sv('p2textcolor',d.p2textcolor);sv('p2gradStart',d.p2gradStart);sv('p2gradEnd',d.p2gradEnd);sv('p2logoFit',d.p2logoFit);
   sv('infoText',d.infoText);sv('playerTurn',d.playerTurn);
@@ -444,8 +528,12 @@ if (saved) {
   COLOR_IDS.forEach(id=>{const v=document.getElementById(id)?.value;if(v){const sp=document.getElementById('spv_'+id);if(sp)sp.style.background=v;const pk=document.getElementById('pk_'+id);if(pk)pk.value=v;}});
   if(localStorage.getItem('scoreboard-logo1'))document.getElementById('lt1').textContent='Logo loaded';
   if(localStorage.getItem('scoreboard-logo2'))document.getElementById('lt2').textContent='Logo loaded';
-} else { setAlign('center'); }
-sync();
+} else {
+  setAlign('center'); setNameAlign(1,'left'); setNameAlign(2,'left');
+}
+
+updatePreview(getState());
+pushState(); // initial push & create bin jika belum ada
 </script>
 </body>
 </html>
