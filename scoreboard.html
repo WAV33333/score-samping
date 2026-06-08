@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Scoreboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:transparent; font-family:'Barlow Condensed',sans-serif; overflow:hidden; }
+
+    .sb-outer {
+      display: inline-block;
+      transform: translateX(0);
+      opacity: 1;
+      transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.45s ease;
+    }
+    .sb-outer.off {
+      transform: translateX(-110%);
+      opacity: 0;
+    }
+
+    .scoreboard { width: 360px; overflow:hidden; border-radius:3px; box-shadow:0 4px 20px rgba(0,0,0,0.6); }
+
+    .player-row {
+      display:flex; align-items:center; height:40px;
+      border-bottom:1px solid rgba(0,0,0,0.25); position:relative;
+    }
+    .player-row:nth-child(2) { border-bottom:none; }
+
+    .logo-area {
+      width:44px; height:40px; flex-shrink:0;
+      background:rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .logo-area img { width:100%; height:100%; }
+    .logo-area.hidden { display:none; }
+
+    .player-name {
+      flex:1; padding:0 10px;
+      font-size:18px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+
+    .score-box {
+      width:50px; height:40px; flex-shrink:0;
+      background:linear-gradient(to bottom, #c8c8c8 0%, #888 100%);
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden; position:relative;
+    }
+    .score-num {
+      font-size:22px; font-weight:800; color:#222;
+      display:block;
+    }
+    @keyframes scoreSlideUp {
+      from { transform:translateY(60%); opacity:0; }
+      to   { transform:translateY(0);   opacity:1; }
+    }
+    .score-num.animate { animation: scoreSlideUp 0.32s cubic-bezier(0.22,1,0.36,1); }
+
+    .turn-arrow { position:absolute; right:52px; font-size:11px; opacity:0.9; pointer-events:none; }
+
+    .info-bar { display:flex; align-items:center; height:26px; }
+    .race-label { flex:1; padding:0 10px; font-size:13px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }
+  </style>
+</head>
+<body>
+  <div class="sb-outer" id="sbOuter">
+    <div class="scoreboard">
+      <div class="player-row" id="row1">
+        <div class="logo-area hidden" id="logo1area"></div>
+        <div class="player-name" id="name1">PLAYER 1</div>
+        <div class="score-box"><span class="score-num" id="score1">0</span></div>
+      </div>
+      <div class="player-row" id="row2">
+        <div class="logo-area hidden" id="logo2area"></div>
+        <div class="player-name" id="name2">PLAYER 2</div>
+        <div class="score-box"><span class="score-num" id="score2">0</span></div>
+      </div>
+      <div class="info-bar" id="infoBar">
+        <div class="race-label" id="raceLabel">RACE TO 21/2</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let prevScores = { 1: null, 2: null };
+
+    function rowBg(d, p) {
+      if (d[`p${p}gradient`]) {
+        return `linear-gradient(to right, ${d[`p${p}gradStart`]||d[`p${p}color`]}, ${d[`p${p}gradEnd`]||d[`p${p}color`]})`;
+      }
+      return d[`p${p}color`] || (p===1 ? '#476cff' : '#e63c3c');
+    }
+
+    function animScore(el, newVal) {
+      el.classList.remove('animate');
+      void el.offsetWidth;
+      el.textContent = newVal;
+      el.classList.add('animate');
+    }
+
+    function apply(d) {
+      const outer = document.getElementById('sbOuter');
+      if (d.scoreboard_visible === false) {
+        outer.classList.add('off');
+      } else {
+        outer.classList.remove('off');
+      }
+
+      [1,2].forEach(p => {
+        const row   = document.getElementById('row'+p);
+        const la    = document.getElementById('logo'+p+'area');
+        const name  = document.getElementById('name'+p);
+        const score = document.getElementById('score'+p);
+        const newScore = d[`p${p}score`] ?? 0;
+
+        row.style.background = rowBg(d, p);
+        name.style.color  = d[`p${p}textcolor`] || '#fff';
+        name.textContent  = d[`p${p}name`] || '';
+
+        if (prevScores[p] !== null && prevScores[p] !== newScore) {
+          animScore(score, newScore);
+        } else {
+          score.textContent = newScore;
+        }
+        prevScores[p] = newScore;
+
+        const logoData = localStorage.getItem('scoreboard-logo'+p);
+        if (d[`p${p}showLogo`] && logoData) {
+          la.classList.remove('hidden');
+          la.innerHTML = `<img src="${logoData}" style="object-fit:${d[`p${p}logoFit`]||'contain'}"/>`;
+        } else {
+          la.classList.add('hidden');
+          la.innerHTML = '';
+        }
+      });
+
+      document.querySelectorAll('.turn-arrow').forEach(e=>e.remove());
+      if (d.playerTurn==='1'||d.playerTurn===1) {
+        const a=document.createElement('span'); a.className='turn-arrow';
+        a.style.color=d.p1textcolor||'#fff'; a.textContent='▶';
+        document.getElementById('row1').appendChild(a);
+      } else if (d.playerTurn==='2'||d.playerTurn===2) {
+        const a=document.createElement('span'); a.className='turn-arrow';
+        a.style.color=d.p2textcolor||'#fff'; a.textContent='▶';
+        document.getElementById('row2').appendChild(a);
+      }
+
+      document.getElementById('infoBar').style.background  = d.color1 || '#e8e8e8';
+      document.getElementById('raceLabel').style.color      = d.textColor1 || '#111';
+      document.getElementById('raceLabel').textContent      = d.infoText || '';
+      document.getElementById('raceLabel').style.textAlign  = d.infoAlign || 'center';
+    }
+
+    let lastRaw = null;
+    function applyFromStorage() {
+      const raw = localStorage.getItem('scoreboard-state');
+      if (raw && raw !== lastRaw) {
+        lastRaw = raw;
+        apply(JSON.parse(raw));
+      }
+    }
+
+    // storage event: fires saat tab LAIN menulis localStorage
+    window.addEventListener('storage', e => {
+      if (e.key === 'scoreboard-state' || e.key === 'scoreboard-ping') {
+        applyFromStorage();
+      }
+    });
+
+    // polling sebagai fallback (same tab / browser tanpa storage event)
+    applyFromStorage();
+    setInterval(applyFromStorage, 500);
+
+    try {
+      const ch = new BroadcastChannel('billiards-scoreboard');
+      ch.onmessage = e => { apply(e.data); lastRaw = JSON.stringify(e.data); };
+    } catch(e) {}
+  </script>
+</body>
+</html>

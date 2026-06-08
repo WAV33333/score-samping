@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Billiards Scorebug</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:     #140e21; --card:  #1e1530; --card2: #251d38;
+      --border: #3a2858; --acc:   #e8752a; --purp:  #9b44d0;
+      --text:   #f0eaf8; --muted: #7a6e90; --inp:   #120d1e;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);font-size:13px;}
+
+    .hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:10;}
+    .hdr-title{font-size:14px;font-weight:600;}
+    .hdr-right{display:flex;align-items:center;gap:8px;}
+
+    .tog{display:inline-flex;align-items:center;gap:0;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:3px 3px 3px 10px;cursor:pointer;user-select:none;}
+    .tog input{display:none;}
+    .tog-text{font-size:11px;font-weight:700;letter-spacing:.08em;margin-right:6px;color:var(--muted);}
+    .tog input:checked~.tog-text{color:var(--acc);}
+    .tog-dot{width:26px;height:26px;border-radius:50%;background:#444;transition:background .2s;}
+    .tog input:checked~.tog-dot{background:var(--acc);}
+
+    .tog-sm{display:inline-flex;align-items:center;gap:0;background:var(--inp);border:1px solid var(--border);border-radius:16px;padding:2px 2px 2px 8px;cursor:pointer;user-select:none;height:30px;}
+    .tog-sm input{display:none;}
+    .tog-sm .tog-text{font-size:10px;margin-right:5px;}
+    .tog-sm input:checked~.tog-text{color:var(--acc);}
+    .tog-sm-dot{width:20px;height:20px;border-radius:50%;background:#444;transition:background .2s;}
+    .tog-sm input:checked~.tog-sm-dot{background:var(--acc);}
+
+    .prev-wrap{padding:12px 12px 0;display:flex;flex-direction:column;align-items:center;}
+    .prev-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+    .prev-board{width:100%;max-width:360px;overflow:hidden;border-radius:3px;box-shadow:0 4px 16px rgba(0,0,0,.5);font-family:'Barlow Condensed',sans-serif;}
+    .prev-row{display:flex;align-items:center;height:40px;border-bottom:1px solid rgba(0,0,0,.25);position:relative;}
+    .prev-row:nth-child(2){border-bottom:none;}
+    .prev-logo{width:44px;height:40px;flex-shrink:0;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .prev-logo img{width:100%;height:100%;}
+    .prev-logo.hidden{display:none;}
+    .prev-name{flex:1;padding:0 10px;font-size:17px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .prev-score-box{width:50px;height:40px;flex-shrink:0;background:linear-gradient(to bottom,#c8c8c8,#888);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#222;}
+    .prev-info{display:flex;align-items:center;height:26px;}
+    .prev-race{flex:1;padding:0 10px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+    .prev-arrow{position:absolute;right:53px;font-size:11px;}
+
+    .sec{border:1px solid var(--border);border-radius:10px;margin:10px;overflow:hidden;}
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--card2);cursor:pointer;user-select:none;}
+    .sec-hdr-left{display:flex;align-items:center;gap:10px;}
+    .sec-title{font-size:13px;font-weight:600;}
+    .chev{font-size:11px;color:var(--muted);transition:transform .2s;}
+    .sec.collapsed .chev{transform:rotate(180deg);}
+    .sec-body{background:var(--card);padding:12px 13px;display:flex;flex-direction:column;gap:10px;}
+    .sec.collapsed .sec-body{display:none;}
+
+    .field{display:flex;align-items:center;gap:10px;}
+    .fl{width:115px;flex-shrink:0;color:var(--muted);font-size:12px;font-weight:500;}
+
+    input[type=text],input[type=number],select{
+      background:var(--inp);border:1px solid var(--border);border-radius:6px;
+      color:var(--text);font-family:'Inter',sans-serif;font-size:13px;
+      padding:7px 10px;outline:none;width:100%;transition:border-color .15s;
+    }
+    input:focus,select:focus{border-color:var(--purp);}
+    select{cursor:pointer;appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a6e90'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+    input[type=number]{-moz-appearance:textfield;}
+    input[type=number]::-webkit-inner-spin-button{display:none;}
+
+    .cf{display:flex;align-items:center;gap:8px;width:100%;}
+    .sw-wrap{position:relative;width:32px;height:32px;flex-shrink:0;}
+    .sw-wrap input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:none;}
+    .sw-prev{width:32px;height:32px;border-radius:5px;border:1px solid var(--border);pointer-events:none;}
+
+    .sc-ctrl{display:flex;align-items:center;}
+    .sc-num{width:60px;height:34px;text-align:center;background:var(--inp);border:1px solid var(--border);border-radius:6px 0 0 6px;color:var(--text);font-size:15px;font-weight:600;font-family:'Inter',sans-serif;}
+    .sc-arrows{display:flex;flex-direction:column;}
+    .sc-arrows button{width:24px;height:17px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;transition:background .1s;}
+    .sc-arrows button:first-child{border-radius:0 6px 0 0;border-bottom:none;}
+    .sc-arrows button:last-child{border-radius:0 0 6px 0;}
+    .sc-arrows button:hover{background:var(--border);color:var(--text);}
+
+    .logo-field{display:flex;gap:6px;width:100%;align-items:center;}
+    .logo-txt{flex:1;background:var(--inp);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .icon-btn{width:32px;height:32px;background:var(--card2);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;transition:background .15s;}
+    .icon-btn:hover{background:var(--border);}
+    input[type=file]{display:none;}
+
+    .divider{height:1px;background:var(--border);margin:2px 0;}
+
+    .status-dot{width:7px;height:7px;border-radius:50%;background:#3cb96e;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    .spacer{height:16px;}
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="hdr-title">Billiards Scorebug</span>
+  <div class="hdr-right">
+    <div class="status-dot" title="Live"></div>
+    <button onclick="openOverlay()" style="height:32px;padding:0 12px;background:var(--purp);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;letter-spacing:.04em;">⛶ OVERLAY</button>
+    <label class="tog">
+      <input type="checkbox" id="mainToggle" checked onchange="onMainToggle()"/>
+      <span class="tog-text" id="togText">ON</span>
+      <div class="tog-dot"></div>
+    </label>
+  </div>
+</div>
+
+<div class="prev-wrap">
+  <div class="prev-lbl">Preview</div>
+  <div class="prev-board">
+    <div class="prev-row" id="pr1" style="background:#476cff">
+      <div class="prev-logo hidden" id="pl1"></div>
+      <div class="prev-name" id="pn1" style="color:#fff">PLAYER 1</div>
+      <div class="prev-score-box" id="ps1">0</div>
+    </div>
+    <div class="prev-row" id="pr2" style="background:#e63c3c">
+      <div class="prev-logo hidden" id="pl2"></div>
+      <div class="prev-name" id="pn2" style="color:#fff">PLAYER 2</div>
+      <div class="prev-score-box" id="ps2">0</div>
+    </div>
+    <div class="prev-info" id="pinfo" style="background:#f5f5f5">
+      <div class="prev-race" id="prace" style="color:#111">RACE TO 21/2</div>
+    </div>
+  </div>
+</div>
+
+<div class="sec" id="secScore">
+  <div class="sec-hdr" onclick="toggleSec('secScore')">
+    <span class="sec-title">Score</span><span class="chev">∧</span>
+  </div>
+  <div class="sec-body">
+    <div class="field"><span class="fl">Info Bar Text</span><input type="text" id="infoText" value="RACE TO 21/2" oninput="sync()"/></div>
+    <div class="field">
+      <span class="fl">Text Align</span>
+      <div style="display:flex;gap:6px;width:100%;">
+        <button id="alignLeft" onclick="setAlign('left')" style="flex:1;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--muted);cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:background .15s;">⬅ Left</button>
+        <button id="alignCenter" onclick="setAlign('center')" style="flex:1;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--acc);color:#fff;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:background .15s;">⬛ Center</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Player Turn</span>
+      <select id="playerTurn" onchange="sync()">
+        <option value="0">None</option>
+        <option value="1">Player 1</option>
+        <option value="2">Player 2</option>
+      </select>
+    </div>
+    <div class="field">
+      <span class="fl">Player 1 Score</span>
+      <div class="sc-ctrl">
+        <input class="sc-num" type="number" id="score1" value="0" min="0" oninput="sync()"/>
+        <div class="sc-arrows"><button onclick="addScore(1,1)">▲</button><button onclick="addScore(1,-1)">▼</button></div>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Player 2 Score</span>
+      <div class="sc-ctrl">
+        <input class="sc-num" type="number" id="score2" value="0" min="0" oninput="sync()"/>
+        <div class="sc-arrows"><button onclick="addScore(2,1)">▲</button><button onclick="addScore(2,-1)">▼</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec" id="secP1">
+  <div class="sec-hdr" onclick="toggleSec('secP1')">
+    <span class="sec-title">Player 1</span><span class="chev">∧</span>
+  </div>
+  <div class="sec-body">
+    <div class="field"><span class="fl">Name</span><input type="text" id="name1" value="PLAYER 1" oninput="sync()"/></div>
+    <div class="field">
+      <span class="fl">Logo</span>
+      <div class="logo-field">
+        <div class="logo-txt" id="lt1">Select image...</div>
+        <button class="icon-btn" onclick="document.getElementById('lf1').click()">🖼</button>
+        <button class="icon-btn" onclick="clearLogo(1)">✕</button>
+        <input type="file" id="lf1" accept="image/*" onchange="loadLogo(1,this)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Show Logo</span>
+      <label class="tog-sm">
+        <input type="checkbox" id="p1showLogo" onchange="sync()"/>
+        <span class="tog-text">OFF</span>
+        <div class="tog-sm-dot"></div>
+      </label>
+    </div>
+    <div class="field"><span class="fl">Logo Fit</span>
+      <select id="p1logoFit" onchange="sync()"><option value="contain">Contain</option><option value="cover">Cover</option></select>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <span class="fl">Color</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p1color" style="background:#476cff"></div><input type="color" id="pk_p1color" value="#476cff" oninput="cpChange('p1color',this.value)"/></div>
+        <input type="text" id="p1color" value="#476cff" oninput="hxChange('p1color',this.value)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Text Color</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p1textcolor" style="background:#ffffff"></div><input type="color" id="pk_p1textcolor" value="#ffffff" oninput="cpChange('p1textcolor',this.value)"/></div>
+        <input type="text" id="p1textcolor" value="#ffffff" oninput="hxChange('p1textcolor',this.value)"/>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <span class="fl">Gradient</span>
+      <label class="tog-sm">
+        <input type="checkbox" id="p1gradient" onchange="sync()"/>
+        <span class="tog-text">OFF</span>
+        <div class="tog-sm-dot"></div>
+      </label>
+    </div>
+    <div class="field">
+      <span class="fl">Grad Start</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p1gradStart" style="background:#7b8fd4"></div><input type="color" id="pk_p1gradStart" value="#7b8fd4" oninput="cpChange('p1gradStart',this.value)"/></div>
+        <input type="text" id="p1gradStart" value="#7b8fd4" oninput="hxChange('p1gradStart',this.value)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Grad End</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p1gradEnd" style="background:#476cff"></div><input type="color" id="pk_p1gradEnd" value="#476cff" oninput="cpChange('p1gradEnd',this.value)"/></div>
+        <input type="text" id="p1gradEnd" value="#476cff" oninput="hxChange('p1gradEnd',this.value)"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec" id="secP2">
+  <div class="sec-hdr" onclick="toggleSec('secP2')">
+    <span class="sec-title">Player 2</span><span class="chev">∧</span>
+  </div>
+  <div class="sec-body">
+    <div class="field"><span class="fl">Name</span><input type="text" id="name2" value="PLAYER 2" oninput="sync()"/></div>
+    <div class="field">
+      <span class="fl">Logo</span>
+      <div class="logo-field">
+        <div class="logo-txt" id="lt2">Select image...</div>
+        <button class="icon-btn" onclick="document.getElementById('lf2').click()">🖼</button>
+        <button class="icon-btn" onclick="clearLogo(2)">✕</button>
+        <input type="file" id="lf2" accept="image/*" onchange="loadLogo(2,this)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Show Logo</span>
+      <label class="tog-sm">
+        <input type="checkbox" id="p2showLogo" onchange="sync()"/>
+        <span class="tog-text">OFF</span>
+        <div class="tog-sm-dot"></div>
+      </label>
+    </div>
+    <div class="field"><span class="fl">Logo Fit</span>
+      <select id="p2logoFit" onchange="sync()"><option value="contain">Contain</option><option value="cover">Cover</option></select>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <span class="fl">Color</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p2color" style="background:#e63c3c"></div><input type="color" id="pk_p2color" value="#e63c3c" oninput="cpChange('p2color',this.value)"/></div>
+        <input type="text" id="p2color" value="#e63c3c" oninput="hxChange('p2color',this.value)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Text Color</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p2textcolor" style="background:#ffffff"></div><input type="color" id="pk_p2textcolor" value="#ffffff" oninput="cpChange('p2textcolor',this.value)"/></div>
+        <input type="text" id="p2textcolor" value="#ffffff" oninput="hxChange('p2textcolor',this.value)"/>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <span class="fl">Gradient</span>
+      <label class="tog-sm">
+        <input type="checkbox" id="p2gradient" onchange="sync()"/>
+        <span class="tog-text">OFF</span>
+        <div class="tog-sm-dot"></div>
+      </label>
+    </div>
+    <div class="field">
+      <span class="fl">Grad Start</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p2gradStart" style="background:#e87070"></div><input type="color" id="pk_p2gradStart" value="#e87070" oninput="cpChange('p2gradStart',this.value)"/></div>
+        <input type="text" id="p2gradStart" value="#e87070" oninput="hxChange('p2gradStart',this.value)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Grad End</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_p2gradEnd" style="background:#e63c3c"></div><input type="color" id="pk_p2gradEnd" value="#e63c3c" oninput="cpChange('p2gradEnd',this.value)"/></div>
+        <input type="text" id="p2gradEnd" value="#e63c3c" oninput="hxChange('p2gradEnd',this.value)"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec" id="secPal">
+  <div class="sec-hdr" onclick="toggleSec('secPal')">
+    <span class="sec-title">Color Palette</span><span class="chev">∧</span>
+  </div>
+  <div class="sec-body">
+    <div class="field">
+      <span class="fl">Info Bar Color</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_color1" style="background:#f5f5f5"></div><input type="color" id="pk_color1" value="#f5f5f5" oninput="cpChange('color1',this.value)"/></div>
+        <input type="text" id="color1" value="#f5f5f5" oninput="hxChange('color1',this.value)"/>
+      </div>
+    </div>
+    <div class="field">
+      <span class="fl">Info Bar Text</span>
+      <div class="cf">
+        <div class="sw-wrap"><div class="sw-prev" id="spv_textColor1" style="background:#111111"></div><input type="color" id="pk_textColor1" value="#111111" oninput="cpChange('textColor1',this.value)"/></div>
+        <input type="text" id="textColor1" value="#111111" oninput="hxChange('textColor1',this.value)"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spacer"></div>
+
+<script>
+const ch = new BroadcastChannel('billiards-scoreboard');
+const COLOR_IDS = ['p1color','p1textcolor','p1gradStart','p1gradEnd','p2color','p2textcolor','p2gradStart','p2gradEnd','color1','textColor1'];
+
+function getState() {
+  const bool = id => document.getElementById(id)?.checked || false;
+  return {
+    scoreboard_visible: document.getElementById('mainToggle').checked,
+    p1name:       document.getElementById('name1').value,
+    p1score:      parseInt(document.getElementById('score1').value)||0,
+    p1color:      document.getElementById('p1color').value,
+    p1textcolor:  document.getElementById('p1textcolor').value,
+    p1showLogo:   bool('p1showLogo'),
+    p1logoFit:    document.getElementById('p1logoFit').value,
+    p1gradient:   bool('p1gradient'),
+    p1gradStart:  document.getElementById('p1gradStart').value,
+    p1gradEnd:    document.getElementById('p1gradEnd').value,
+    p2name:       document.getElementById('name2').value,
+    p2score:      parseInt(document.getElementById('score2').value)||0,
+    p2color:      document.getElementById('p2color').value,
+    p2textcolor:  document.getElementById('p2textcolor').value,
+    p2showLogo:   bool('p2showLogo'),
+    p2logoFit:    document.getElementById('p2logoFit').value,
+    p2gradient:   bool('p2gradient'),
+    p2gradStart:  document.getElementById('p2gradStart').value,
+    p2gradEnd:    document.getElementById('p2gradEnd').value,
+    infoText:     document.getElementById('infoText').value,
+    infoAlign:    window._infoAlign || 'center',
+    playerTurn:   document.getElementById('playerTurn').value,
+    color1:       document.getElementById('color1').value,
+    textColor1:   document.getElementById('textColor1').value,
+  };
+}
+
+function rowBg(d, p) {
+  if (d[`p${p}gradient`]) return `linear-gradient(to right,${d[`p${p}gradStart`]},${d[`p${p}gradEnd`]})`;
+  return d[`p${p}color`];
+}
+
+function updatePreview(d) {
+  [1,2].forEach(p => {
+    const row = document.getElementById('pr'+p);
+    const logoEl = document.getElementById('pl'+p);
+    row.style.background = rowBg(d, p);
+    row.querySelector('.prev-name').style.color = d[`p${p}textcolor`];
+    document.getElementById('pn'+p).textContent = d[`p${p}name`] || 'PLAYER '+p;
+    document.getElementById('ps'+p).textContent = d[`p${p}score`];
+    const logoData = localStorage.getItem('scoreboard-logo'+p);
+    if (d[`p${p}showLogo`] && logoData) {
+      logoEl.classList.remove('hidden');
+      logoEl.innerHTML = `<img src="${logoData}" style="width:100%;height:100%;object-fit:${d[`p${p}logoFit`]||'contain'}"/>`;
+    } else {
+      logoEl.classList.add('hidden');
+      logoEl.innerHTML = '';
+    }
+  });
+  document.querySelectorAll('.prev-arrow').forEach(e=>e.remove());
+  if (d.playerTurn==='1') { const a=document.createElement('span');a.className='prev-arrow';a.style.color=d.p1textcolor;a.textContent='▶';document.getElementById('pr1').appendChild(a); }
+  else if (d.playerTurn==='2') { const a=document.createElement('span');a.className='prev-arrow';a.style.color=d.p2textcolor;a.textContent='▶';document.getElementById('pr2').appendChild(a); }
+  document.getElementById('pinfo').style.background = d.color1;
+  document.getElementById('prace').style.color = d.textColor1;
+  document.getElementById('prace').textContent = d.infoText || '';
+  document.getElementById('prace').style.textAlign = d.infoAlign || 'center';
+  ['p1showLogo','p1gradient','p2showLogo','p2gradient'].forEach(id=>{
+    const cb = document.getElementById(id);
+    const span = cb?.parentElement?.querySelector('.tog-text');
+    if (span) span.textContent = cb.checked ? 'ON' : 'OFF';
+  });
+  document.getElementById('togText').textContent = document.getElementById('mainToggle').checked ? 'ON' : 'OFF';
+}
+
+function sync() {
+  const d = getState();
+  ch.postMessage(d);
+  localStorage.setItem('scoreboard-state', JSON.stringify(d));
+  // Trigger storage event agar tab lain bisa mendeteksi perubahan
+  localStorage.setItem('scoreboard-ping', Date.now().toString());
+  updatePreview(d);
+}
+
+function openOverlay() {
+  const base = window.location.href.replace(/\/[^/]*$/, '');
+  window.open(base + '/scoreboard.html', '_blank');
+}
+function onMainToggle() { sync(); }
+function addScore(p,delta) { const el=document.getElementById('score'+p);el.value=Math.max(0,(parseInt(el.value)||0)+delta);sync(); }
+function toggleSec(id) { document.getElementById(id).classList.toggle('collapsed'); }
+function cpChange(id,val) { const el=document.getElementById(id);if(el)el.value=val;const sp=document.getElementById('spv_'+id);if(sp)sp.style.background=val;sync(); }
+function hxChange(id,val) { if(/^#[0-9a-fA-F]{6}$/.test(val)){const pk=document.getElementById('pk_'+id);if(pk)pk.value=val;const sp=document.getElementById('spv_'+id);if(sp)sp.style.background=val;sync();} }
+function loadLogo(p,input) { if(!input.files[0])return;const r=new FileReader();r.onload=e=>{localStorage.setItem('scoreboard-logo'+p,e.target.result);document.getElementById('lt'+p).textContent=input.files[0].name;sync();};r.readAsDataURL(input.files[0]); }
+function clearLogo(p) { localStorage.removeItem('scoreboard-logo'+p);document.getElementById('lt'+p).textContent='Select image...';document.getElementById('lf'+p).value='';sync(); }
+function setAlign(v) {
+  window._infoAlign = v;
+  document.getElementById('alignLeft').style.background = v==='left' ? 'var(--acc)' : 'var(--card2)';
+  document.getElementById('alignLeft').style.color = v==='left' ? '#fff' : 'var(--muted)';
+  document.getElementById('alignCenter').style.background = v==='center' ? 'var(--acc)' : 'var(--card2)';
+  document.getElementById('alignCenter').style.color = v==='center' ? '#fff' : 'var(--muted)';
+  sync();
+}
+
+const saved = localStorage.getItem('scoreboard-state');
+if (saved) {
+  const d = JSON.parse(saved);
+  const sv = (id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.value=v;};
+  const sb = (id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.checked=v;};
+  sv('name1',d.p1name);sv('score1',d.p1score);sv('name2',d.p2name);sv('score2',d.p2score);
+  sv('p1color',d.p1color);sv('p1textcolor',d.p1textcolor);sv('p1gradStart',d.p1gradStart);sv('p1gradEnd',d.p1gradEnd);sv('p1logoFit',d.p1logoFit);
+  sv('p2color',d.p2color);sv('p2textcolor',d.p2textcolor);sv('p2gradStart',d.p2gradStart);sv('p2gradEnd',d.p2gradEnd);sv('p2logoFit',d.p2logoFit);
+  sv('infoText',d.infoText);sv('playerTurn',d.playerTurn);
+  if(d.infoAlign) setAlign(d.infoAlign); else setAlign('center');
+  sv('color1',d.color1);sv('textColor1',d.textColor1);
+  sb('p1showLogo',d.p1showLogo);sb('p1gradient',d.p1gradient);
+  sb('p2showLogo',d.p2showLogo);sb('p2gradient',d.p2gradient);
+  sb('mainToggle',d.scoreboard_visible!==false);
+  COLOR_IDS.forEach(id=>{const v=document.getElementById(id)?.value;if(v){const sp=document.getElementById('spv_'+id);if(sp)sp.style.background=v;const pk=document.getElementById('pk_'+id);if(pk)pk.value=v;}});
+  if(localStorage.getItem('scoreboard-logo1'))document.getElementById('lt1').textContent='Logo loaded';
+  if(localStorage.getItem('scoreboard-logo2'))document.getElementById('lt2').textContent='Logo loaded';
+} else { setAlign('center'); }
+sync();
+</script>
+</body>
+</html>
